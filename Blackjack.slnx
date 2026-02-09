@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Blackjack.Cli/Blackjack.Cli.csproj" Id="6a4c55d7-1905-4058-b23a-c57e049a38a0" />
+  <Project Path="Blackjack.Core/Blackjack.Core.csproj" Id="279d83bd-8f66-4ce1-b24e-64c303311e86" />
+  <Project Path="Blackjack.Tests/Blackjack.Tests.csproj" Id="30ddcaa2-13b2-4df0-a50d-be1c9010c64f" />
+</Solution>
