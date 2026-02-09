@@ -3,14 +3,14 @@ using System.Collections.Generic;
 
 namespace Blackjack.Core.Domain
 {
-    // Et deck repræsenterer en blandet kortbunke.
-    // Vi holder Shuffle og draw her for at adskille kortlogik fra UI og game flow.
+    // A deck represents a shuffled pile of cards.
+    // We keep Shuffle and Draw here to separate card logic from UI and game flow.
     public sealed class Deck
     {
         private readonly List<Card> _cards;
         private readonly Random _random;
 
-        // seed er nyttig til tests: samme seed giver samme shuffle-rækkefølge.
+        // seed is useful for tests: the same seed produces the same shuffle order.
         public Deck(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
@@ -20,7 +20,7 @@ namespace Blackjack.Core.Domain
 
         public int Count => _cards.Count;
 
-        // Trækker det øverste kort fra bunken. Kaster exception hvis bunken er tom.
+        // Draws the top card from the deck. Throws if the deck is empty.
         public Card Draw()
         {
             if (_cards.Count == 0)
@@ -30,7 +30,7 @@ namespace Blackjack.Core.Domain
             return topCard;
         }
 
-        // Fisher-Yates shuffle algoritme for effektiv og unbiased blanding.
+        // Fisher–Yates shuffle algorithm for efficient, unbiased shuffling.
         public void Shuffle()
         {
             for (int i = _cards.Count - 1; i > 0; i--)
@@ -42,7 +42,7 @@ namespace Blackjack.Core.Domain
             }
         }
 
-        // Opretter et standard 52-korts deck (uden jokere).
+        // Creates a standard 52-card deck (no jokers).
         private static List<Card> CreateStandard52CardDeck()
         {
             List<Card> cards = new List<Card>(capacity: 52);

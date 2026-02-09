@@ -1,6 +1,6 @@
 ﻿namespace Blackjack.Core.Domain;
 
-// Kulører i et standard kortspil (52 kort).
+// Suits in a standard 52-card deck.
 public enum Suit
 {
     Hearts,
@@ -9,8 +9,8 @@ public enum Suit
     Spades
 }
 
-// Rank er kortets navn. Vi gemmer også standard-point for Blackjack.
-// Es håndteres som 11 her, men kan blive 1 i Hånd-beregningen for at undgå bust.
+// Rank is the card's name. We also store the standard Blackjack points.
+// Ace is represented as 11 here, but can be treated as 1 in hand calculation to avoid a bust.
 public enum Rank
 {
     Two = 2,
@@ -28,8 +28,8 @@ public enum Rank
     Ace = 11
 }
 
-// Immutale kortobjekt: Når et kort er oprettet, kan det ikke ændres.
-// Det gør programmet enklere at teste og reasonere om, da kortets værdi og kulør er faste.
+// Immutable card object: once a card is created it cannot be changed.
+// This makes the program easier to test and reason about, since a card's value and suit are fixed.
 public sealed class Card
 {
     public Suit Suit { get; }
@@ -41,12 +41,12 @@ public sealed class Card
         Rank = rank;
     }
 
-    // Standardværdi i Blackjack (Es justeres evt. i Hand).
+    // Standard Blackjack value (Ace may be adjusted in Hand).
     public int Value => (int)Rank;
 
     public bool IsAce => Rank == Rank.Ace;
 
-    // Hjælper til senere UI-visning og debugging.
+    // Helpful for UI display and debugging.
     public override string ToString()
     {
         return $"{Rank} of {Suit}";

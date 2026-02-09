@@ -3,8 +3,8 @@ using System.Linq;
 
 namespace Blackjack.Core.Domain
 {
-    // En hånd repræsenterer de kort, som spiller eller dealer har på handen.
-    // Denne klasse indeholder regelen for korrekt beregning af en håndværdi med Es.
+    // A hand represents the cards that a player or dealer has.
+    // This class contains the rule for correctly calculating a hand value with Aces.
     public sealed class Hand
     {
         private readonly List<Card> _cards = new List<Card>();
@@ -14,17 +14,17 @@ namespace Blackjack.Core.Domain
                _cards.Add(card);
         }
 
-        // Regler:
-        // - Billedkort = 10 (ligger i Card.Value)
-        // - Es = 11 eller 1 (justeres i denne metode)
-        // Vi starter med Es = 11 og "nedgraderer" til 1 hvis totalen overstiger 21. (bust)
+        // Rules:
+        // - Face cards = 10 (contained in Card.Value)
+        // - Aces = 11 or 1 (adjusted in this method)
+        // We start with Aces = 11 and "downgrade" to 1 if the total exceeds 21 (bust).
         public int GetValue()
         {
             int total = _cards.Sum(c => c.Value);
             int aceCount = _cards.Count(c => c.IsAce);
 
-            // Hvis total > 21, kan vi redde h[nden ved at gøre et eller flere Es til 1.
-            // Hvert Es der nedgraderes reducerer total med 10 (fra 11 til 1).
+            // If total > 21, we can save the hand by converting one or more Aces to 1.
+            // Each Ace downgraded reduces the total by 10 (from 11 to 1).
             while (total > 21 && aceCount > 0)
             {
                 total -= 10;
@@ -33,7 +33,7 @@ namespace Blackjack.Core.Domain
             return total;
         }
 
-        // Convenience property til game flow, så vi kan stoppe runden ved bust.
+        // Convenience property for game flow, so we can stop the round on a bust.
         public bool IsBust => GetValue() > 21;
     }
 }
