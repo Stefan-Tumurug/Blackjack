@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Blackjack.Core.Domain;
+﻿namespace Blackjack.Core.Domain;
 
 // Kulører i et standard kortspil (52 kort).
 public enum Suit
