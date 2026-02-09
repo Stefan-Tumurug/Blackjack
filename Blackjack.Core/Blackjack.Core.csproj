@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Domain\" />
+    <Folder Include="Game\" />
+    <Folder Include="Abstractions\" />
+  </ItemGroup>
+
 </Project>
