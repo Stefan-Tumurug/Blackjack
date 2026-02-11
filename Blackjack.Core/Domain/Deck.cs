@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Blackjack.Core.Abstractions;
+using System;
 using System.Collections.Generic;
 
 namespace Blackjack.Core.Domain
 {
     // A deck represents a shuffled pile of cards.
     // We keep Shuffle and Draw here to separate card logic from UI and game flow.
-    public sealed class Deck
+    public sealed class Deck : IDeck
     {
         private readonly List<Card> _cards;
         private readonly Random _random;
