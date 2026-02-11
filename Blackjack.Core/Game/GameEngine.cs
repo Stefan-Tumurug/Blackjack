@@ -3,22 +3,23 @@ using Blackjack.Core.Domain;
 
 namespace Blackjack.Core.Game
 {
-    // Styrer én runde Blackjack.
-    // Indeholder ingen UI-logik, kun spilflow og regler.
+    // Controls a round of Blackjack.
+    // Doesn't involve any UI-logic, gameflow and rules only.
     public sealed class GameEngine
     {
         private readonly IDeck _deck;
         public Hand PlayerHand { get; } = new Hand();
         public Hand DealerHand { get; } = new Hand();
 
-        // Tydeligører at GameEngine kræver et deck for at fungere, og fortæller klart hvilken fejl det er ved crash.
+        // Makes it clear that GameEngine requires a deck to run, and throws the excact exception.
+        
         public GameEngine(IDeck deck)
         {
             _deck = deck ?? throw new ArgumentNullException(nameof(deck));
         }
 
 
-        // Startdeal: Begynder spillet ved at give både spiller og dealer to kort hver.
+        // Startdeal: Starts the game by handing the player and dealer one card each.
         public void StartRound()
         {
             PlayerHand.AddCard(_deck.Draw());
@@ -35,8 +36,8 @@ namespace Blackjack.Core.Game
 
         public void DealerPlay()
         {
-            // Standard blackjack regel:
-            // Dealer skal trække kort indtil hånden er 17 eller højere.
+            // Standard blackjack rule:
+            // Dealer must draw cards until the value of the hand is 17 or higher.
             while (DealerHand.GetValue() < 17)
             {
                 DealerHand.AddCard(_deck.Draw());

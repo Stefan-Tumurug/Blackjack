@@ -5,9 +5,8 @@ using Blackjack.Core.Domain;
 
 namespace Blackjack.Tests.Game;
 
-// Fake deck til tests: returnerer kort i en forudbestemt rækkefølge.
-// Gør tests deterministiske og uafhængige af shuffling.
-
+// Fake deck for tests: returns cards in a predetermined pattern.
+// Leads to tests being independendent from shuffle functions.
 public sealed class FakeDeck : IDeck
 {
     private readonly Queue<Card> _cards;

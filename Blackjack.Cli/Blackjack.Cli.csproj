@@ -11,8 +11,4 @@
     <ProjectReference Include="..\Blackjack.Core\Blackjack.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="UI\" />
-  </ItemGroup>
-
 </Project>

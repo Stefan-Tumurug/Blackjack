@@ -11,16 +11,16 @@ public sealed class GameEngineTests
     public void DealerPlay_DealerDrawsUntilAtleast17()
     {
         // Arrange
-        // StartRound trækker: P!, D1, P2, D2
-        // Dealer får 10 + 6 = 16 først, skal trække 1 kort mere
-        // Næste kort er et Es: 16 + 11 = 27, men es burde justeres til 1 -> 17.
+        // StartRound draw: P1, D1, P2, D2
+        // Dealer draws 10 + 6 = 16 first, and pulls 1 more card
+        // Next card is an ace: 16 + 11 = 27, which should change the dealers value according to ace logic. 1 -> 17.
         FakeDeck deck = new FakeDeck(new[]
         {
             new Card(Suit.Clubs, Rank.Two),   // P1
             new Card(Suit.Spades, Rank.Ten), // D1
             new Card(Suit.Hearts, Rank.Three), // P2
             new Card(Suit.Diamonds, Rank.Six), // D2
-            new Card(Suit.Hearts, Rank.Ace)   // D3 - Dealer hit -> 17 (via es-logik)
+            new Card(Suit.Hearts, Rank.Ace)   // D3 - Dealer hit -> 17 (ace-logic)
         });
 
         GameEngine engine = new GameEngine(deck);

@@ -2,7 +2,7 @@
 
 namespace Blackjack.Core.Abstractions;
 
-// Abstraktion så vi kan mocke/fake deck i tests.
+// Abstraction for mock/test decks.
 public interface IDeck
 {
     int Count { get; }

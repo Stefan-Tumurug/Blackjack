@@ -1,6 +1,6 @@
 ﻿namespace Blackjack.Core.Game;
 
-// Resultat af én runde
+// Result of a round
 public enum RoundResult
 {
     PlayerWin,
