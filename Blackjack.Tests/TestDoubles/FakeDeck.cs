@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Blackjack.Core.Abstractions;
 using Blackjack.Core.Domain;
 
-namespace Blackjack.Tests.Game;
+namespace Blackjack.Tests.TestDoubles;
 
 // Fake deck for tests: returns cards in a predetermined pattern.
 // Leads to tests being independendent from shuffle functions.

@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Betting\" />
+    <Folder Include="Players\" />
+  </ItemGroup>
+
 </Project>
