@@ -19,6 +19,10 @@ namespace Blackjack.Core.Domain
         }
         public void AddCard(Card card)
         {
+            if (card == null)
+            {
+                throw new ArgumentNullException(nameof(card));
+            }
                _cards.Add(card);
         }
 
