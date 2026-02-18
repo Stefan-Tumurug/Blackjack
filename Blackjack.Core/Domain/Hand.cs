@@ -8,7 +8,15 @@ namespace Blackjack.Core.Domain
     public sealed class Hand
     {
         private readonly List<Card> _cards = new List<Card>();
+
+        // Expose cards as read-only so callers can inspect the hand
+        // without being able to modify internal state.
         public IReadOnlyList<Card> Cards => _cards;
+        public void Clear()
+        {
+            // Resets the hand between rounds without allocating a new Hand instance.
+            _cards.Clear();
+        }
         public void AddCard(Card card)
         {
                _cards.Add(card);
