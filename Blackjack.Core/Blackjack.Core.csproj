@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Betting\" />
     <Folder Include="Players\" />
   </ItemGroup>
 
