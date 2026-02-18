@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Blackjack.Core.Domain
@@ -22,8 +23,8 @@ namespace Blackjack.Core.Domain
             if (card == null)
             {
                 throw new ArgumentNullException(nameof(card));
-            }
-               _cards.Add(card);
+            }   
+            _cards.Add(card);
         }
 
         // Rules:

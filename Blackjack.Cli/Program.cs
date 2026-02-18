@@ -1,61 +1,58 @@
-﻿using Blackjack.Core.Domain;
+﻿using System;
+using System.Collections.Generic;
+using Blackjack.Core.Abstractions;
+using Blackjack.Core.Betting;
+using Blackjack.Core.Domain;
 using Blackjack.Core.Game;
+using Blackjack.Core.Players;
 using Blackjack.Cli.UI;
 
 while (true)
 {
     Console.Clear();
 
-    // Composition root: CLI creates concrete dependencies
-    Deck deck = new Deck();
-    GameEngine engine = new GameEngine(deck);
+    // Dependencies
+    IDeck deck = new Deck();
+    IPayoutCalculator payoutCalculator = new StandardPayoutCalculator();
+
+    // Create one human-like bot player for now
+    Player player = new Player(
+        name: "Player 1",
+        bankroll: new Bankroll(100),
+        strategy: new BasicBotStrategy());
+
+    player.SetBet(new Bet(10));
+
+    List<Player> players = new List<Player> { player };
+
+    GameEngine engine = new GameEngine(deck, payoutCalculator, players);
 
     engine.StartRound();
 
-    // Players turn
-    while (true)
+    // Bot plays automatically
+    engine.PlayPlayers();
+
+    engine.DealerPlay();
+
+    var results = engine.ResolveResults();
+    engine.ApplyPayouts(results);
+
+    ConsoleRenderer.ShowHands(player.Hand, engine.DealerHand, hideDealerHoleCard: false);
+
+    RoundResult result = results[player];
+
+    string text = result switch
     {
-        ConsoleRenderer.ShowHands(engine.PlayerHand, engine.DealerHand, hideDealerHoleCard: true);
+        RoundResult.PlayerWin => "Player wins!",
+        RoundResult.DealerWin => "Dealer wins.",
+        _ => "Push."
+    };
 
-        if (engine.PlayerHand.IsBust)
-        {
-            ConsoleRenderer.ShowResult("You busted! Dealer wins.");
-            break;
-        }
+    ConsoleRenderer.ShowResult(text);
 
-        int choice = ConsoleInput.ReadMenuChoice("Vælg: (1) Hit, (2) Stand, (0) Exit: ", 0, 1, 2);
-
-        if (choice == 1)
-        {
-            engine.PlayerHit();
-            continue;
-        }
-
-        // Stand
-        break;
-    }
-
-    // Dealer plays if player hasn't busted already
-    if (!engine.PlayerHand.IsBust)
-    {
-        engine.DealerPlay();
-
-        ConsoleRenderer.ShowHands(engine.PlayerHand, engine.DealerHand, hideDealerHoleCard: false);
-
-        RoundResult result = engine.DetermineWinner();
-        string text = result switch
-        {
-            RoundResult.PlayerWin => "You win!",
-            RoundResult.DealerWin => "Dealer wins.",
-            _ => "Draw (push)."
-        };
-
-        ConsoleRenderer.ShowResult(text);
-    }
+    Console.WriteLine($"Balance: {player.Bankroll.Balance}");
 
     int again = ConsoleInput.ReadMenuChoice("Play again? 1 = Yes, 0 = No: ", 1, 0);
     if (again == 0)
         break;
 }
-
-
