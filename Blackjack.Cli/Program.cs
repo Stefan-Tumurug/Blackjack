@@ -5,6 +5,7 @@ using Blackjack.Core.Betting;
 using Blackjack.Core.Domain;
 using Blackjack.Core.Game;
 using Blackjack.Core.Players;
+using Blackjack.Core.Players.Strategies;
 using Blackjack.Cli.UI;
 
 while (true)
@@ -19,7 +20,7 @@ while (true)
     Player player = new Player(
         name: "Player 1",
         bankroll: new Bankroll(100),
-        strategy: new BasicBotStrategy());
+        strategy: new BasicBotStrategy(BotStrategySettings.Standard()));
 
     player.SetBet(new Bet(10));
 
