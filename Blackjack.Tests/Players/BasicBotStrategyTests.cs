@@ -1,4 +1,5 @@
-﻿using Blackjack.Core.Domain;
+﻿using Blackjack.Core.Betting;
+using Blackjack.Core.Domain;
 using Blackjack.Core.Game;
 using Blackjack.Core.Players;
 using Blackjack.Core.Players.Strategies;
@@ -14,12 +15,13 @@ namespace Blackjack.Tests.Players
         {
             // Arrange
             BasicBotStrategy strategy = new BasicBotStrategy(BotStrategySettings.Standard());
-            Hand hand = new Hand();
-            hand.AddCard(new Card(Suit.Clubs, Rank.Ten));  // 10
-            hand.AddCard(new Card(Suit.Clubs, Rank.Six));  // 16
+            PlayerHand playerHand = CreatePlayerHandWithCards(
+                betAmount: 10,
+                new Card(Suit.Clubs, Rank.Ten),  // 10
+                new Card(Suit.Clubs, Rank.Six)); // 16
 
             PlayerDecisionContext context = new PlayerDecisionContext(
-                playerHand: hand,
+                playerHand: playerHand,
                 dealerUpCard: new Card(Suit.Spades, Rank.Two),
                 canDoubleDown: false,
                 canSplit: false);
@@ -36,12 +38,13 @@ namespace Blackjack.Tests.Players
         {
             // Arrange
             BasicBotStrategy strategy = new BasicBotStrategy(BotStrategySettings.Standard());
-            Hand hand = new Hand();
-            hand.AddCard(new Card(Suit.Clubs, Rank.Ten));   // 10
-            hand.AddCard(new Card(Suit.Clubs, Rank.Seven)); // 17
+            PlayerHand playerHand = CreatePlayerHandWithCards(
+                betAmount: 10,
+                new Card(Suit.Clubs, Rank.Ten),   // 10
+                new Card(Suit.Clubs, Rank.Seven)); // 17
 
             PlayerDecisionContext context = new PlayerDecisionContext(
-                playerHand: hand,
+                playerHand: playerHand,
                 dealerUpCard: new Card(Suit.Spades, Rank.Two),
                 canDoubleDown: false,
                 canSplit: false);
@@ -58,12 +61,13 @@ namespace Blackjack.Tests.Players
         {
             // Arrange
             BasicBotStrategy strategy = new BasicBotStrategy(BotStrategySettings.Standard());
-            Hand hand = new Hand();
-            hand.AddCard(new Card(Suit.Clubs, Rank.Five)); // 5
-            hand.AddCard(new Card(Suit.Clubs, Rank.Six));  // 11
+            PlayerHand playerHand = CreatePlayerHandWithCards(
+                betAmount: 10,
+                new Card(Suit.Clubs, Rank.Five), // 5
+                new Card(Suit.Clubs, Rank.Six)); // 11
 
             PlayerDecisionContext context = new PlayerDecisionContext(
-                playerHand: hand,
+                playerHand: playerHand,
                 dealerUpCard: new Card(Suit.Spades, Rank.Six),
                 canDoubleDown: true,
                 canSplit: false);
@@ -80,12 +84,13 @@ namespace Blackjack.Tests.Players
         {
             // Arrange
             BasicBotStrategy strategy = new BasicBotStrategy(BotStrategySettings.Conservative());
-            Hand hand = new Hand();
-            hand.AddCard(new Card(Suit.Clubs, Rank.Five));
-            hand.AddCard(new Card(Suit.Clubs, Rank.Six));  // 11
+            PlayerHand playerHand = CreatePlayerHandWithCards(
+                betAmount: 10,
+                new Card(Suit.Clubs, Rank.Five),
+                new Card(Suit.Clubs, Rank.Six)); // 11
 
             PlayerDecisionContext context = new PlayerDecisionContext(
-                playerHand: hand,
+                playerHand: playerHand,
                 dealerUpCard: new Card(Suit.Spades, Rank.Six),
                 canDoubleDown: true,
                 canSplit: false);
@@ -95,6 +100,18 @@ namespace Blackjack.Tests.Players
 
             // Assert
             Assert.AreNotEqual(PlayerDecision.DoubleDown, decision);
+        }
+
+        private static PlayerHand CreatePlayerHandWithCards(int betAmount, params Card[] cards)
+        {
+            PlayerHand playerHand = new PlayerHand(new Bet(betAmount));
+
+            foreach (Card card in cards)
+            {
+                playerHand.Hand.AddCard(card);
+            }
+
+            return playerHand;
         }
     }
 }

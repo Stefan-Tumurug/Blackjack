@@ -39,13 +39,10 @@ namespace Blackjack.Core.Game
 
             foreach (Player player in Players)
             {
-                if (player.CurrentBet == null)
+                if (player.Hands.Count == 0)
                 {
-                    throw new InvalidOperationException($"Player {player.Name} has no bet.");
+                    throw new InvalidOperationException($"Player {player.Name} has no hands for the round.");
                 }
-
-                player.Hand.Clear();
-                player.HandState.Reset();
             }
 
             DealInitialCards();
@@ -55,104 +52,173 @@ namespace Blackjack.Core.Game
         {
             foreach (Player player in Players)
             {
-                player.Hand.AddCard(_deck.Draw());
-                player.Hand.AddCard(_deck.Draw());
+                // At round start we only deal to the first hand.
+                PlayerHand firstHand = player.Hands[0];
+
+                firstHand.Hand.AddCard(_deck.Draw());
+                firstHand.Hand.AddCard(_deck.Draw());
             }
 
             DealerHand.AddCard(_deck.Draw());
             DealerHand.AddCard(_deck.Draw());
         }
+
         public void PlayPlayers()
         {
             Card dealerUpCard = DealerHand.Cards[0];
 
             foreach (Player player in Players)
             {
-                PlaySinglePlayer(player, dealerUpCard);
+                for (int handIndex = 0; handIndex < player.Hands.Count; handIndex++)
+                {
+                    PlayerHand playerHand = player.Hands[handIndex];
+                    PlaySingleHand(player, playerHand, dealerUpCard);
+                }
             }
         }
 
-        private void PlaySinglePlayer(Player player, Card dealerUpCard)
-        {
-            while (true)
-            {
-                if (player.Hand.IsBust)
-                {
-                    return;
-                }
-
-                PlayerDecision decision = player.Strategy.Decide(
-                    new PlayerDecisionContext(
-                        player.Hand,
-                        dealerUpCard,
-                        canDoubleDown: CanDoubleDown(player),
-                        canSplit: false));
-
-                if (decision == PlayerDecision.Stand)
-                {
-                    player.HandState.Stand();
-                    return;
-                }
-
-                if (decision == PlayerDecision.Hit)
-                {
-                    player.Hand.AddCard(_deck.Draw());
-                    continue;
-                }
-
-                if (decision == PlayerDecision.DoubleDown && CanDoubleDown(player))
-                {
-                    player.Hand.AddCard(_deck.Draw());
-                    player.HandState.MarkDoubledDown();
-                    return;
-                }
-
-                return;
-            }
-        }
-
-        private static bool CanDoubleDown(Player player)
-        {
-            return player.Hand.Cards.Count == 2 && !player.Hand.IsBust;
-        }
         public void DealerPlay()
         {
+            // Dealer draws until at least 17 (standard rule).
             while (DealerHand.GetValue() < 17)
             {
                 DealerHand.AddCard(_deck.Draw());
             }
         }
 
-        public IReadOnlyDictionary<Player, RoundResult> ResolveResults()
+        private void PlaySingleHand(Player player, PlayerHand playerHand, Card dealerUpCard)
         {
-            Dictionary<Player, RoundResult> results = new();
+            while (true)
+            {
+                if (playerHand.Hand.IsBust)
+                {
+                    return;
+                }
+
+                PlayerDecision decision = player.Strategy.Decide(
+                    new PlayerDecisionContext(
+                        playerHand,
+                        dealerUpCard,
+                        canDoubleDown: CanDoubleDown(playerHand),
+                        canSplit: CanSplit(playerHand, player)));
+
+                if (decision == PlayerDecision.Stand)
+                {
+                    playerHand.State.Stand();
+                    return;
+                }
+
+                if (decision == PlayerDecision.Hit)
+                {
+                    playerHand.Hand.AddCard(_deck.Draw());
+                    continue;
+                }
+
+                if (decision == PlayerDecision.DoubleDown && CanDoubleDown(playerHand))
+                {
+                    // Double down: exactly one card, then stand.
+                    playerHand.Hand.AddCard(_deck.Draw());
+                    playerHand.State.MarkDoubledDown();
+                    return;
+                }
+
+                if (decision == PlayerDecision.Split && CanSplit(playerHand, player))
+                {
+                    PerformSplit(player, playerHand);
+                    // After splitting, continue playing the current hand.
+                    // The new hand will be played later by the outer loop.
+                    continue;
+                }
+
+                // If strategy returns an invalid decision, default to stand.
+                playerHand.State.Stand();
+                return;
+            }
+        }
+
+        private static bool CanDoubleDown(PlayerHand playerHand)
+        {
+            return playerHand.Hand.Cards.Count == 2 && !playerHand.State.HasDoubledDown;
+        }
+
+        private static bool CanSplit(PlayerHand playerHand, Player player)
+        {
+            // Minimal split rule:
+            // - only allowed on exactly two cards
+            // - ranks must match
+            // - only one split per original player (no re-splitting)
+            if (playerHand.Hand.Cards.Count != 2)
+            {
+                return false;
+            }
+
+            if (player.Hands.Count >= 2)
+            {
+                return false;
+            }
+
+            Card first = playerHand.Hand.Cards[0];
+            Card second = playerHand.Hand.Cards[1];
+
+            return first.Rank == second.Rank;
+        }
+
+        private void PerformSplit(Player player, PlayerHand originalHand)
+        {
+            // Splitting duplicates the bet for the new hand.
+            // We keep bankroll checks simple: require bankroll can cover the same bet again.
+            if (!player.Bankroll.CanPlaceBet(originalHand.Bet.Amount))
+            {
+                // Not enough money to split. Strategy asked for it, but we reject it.
+                return;
+            }
+
+            // Create a new hand with the same bet.
+            PlayerHand splitHand = new PlayerHand(originalHand.Bet);
+
+            // Move one card from the original hand to the split hand.
+            Card movedCard = originalHand.Hand.Cards[1];
+
+            // Rebuild original hand: keep first card only.
+            // We don't expose mutation of Cards, so we reset and re-add.
+            Card firstCard = originalHand.Hand.Cards[0];
+
+            originalHand.Hand.Clear();
+            originalHand.Hand.AddCard(firstCard);
+
+            splitHand.Hand.AddCard(movedCard);
+
+            // Deal one new card to each hand after splitting.
+            originalHand.Hand.AddCard(_deck.Draw());
+            splitHand.Hand.AddCard(_deck.Draw());
+
+            player.Hands.Add(splitHand);
+        }
+        public IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> ResolveResults()
+        {
+            List<(PlayerHandKey, RoundResult)> results = new();
 
             foreach (Player player in Players)
             {
-                results[player] = DetermineWinner(player.Hand, DealerHand);
+                foreach (PlayerHand hand in player.Hands)
+                {
+                    RoundResult result = DetermineWinner(hand.Hand, DealerHand);
+                    results.Add((new PlayerHandKey(player, hand), result));
+                }
             }
 
             return results;
         }
-
-        public void ApplyPayouts(IReadOnlyDictionary<Player, RoundResult> results)
+        public void ApplyPayouts(IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results)
         {
-            foreach (KeyValuePair<Player, RoundResult> kvp in results)
+            foreach ((PlayerHandKey key, RoundResult result) in results)
             {
-                Player player = kvp.Key;
-                RoundResult result = kvp.Value;
-
-                if (player.CurrentBet == null)
-                {
-                    throw new InvalidOperationException($"Player {player.Name} has no bet.");
-                }
-
                 int net = _payoutCalculator.CalculateNetChange(
-                    player.CurrentBet.Amount,
+                    key.Hand.Bet.Amount,
                     result,
-                    player.HandState.HasDoubledDown);
+                    key.Hand.State.HasDoubledDown);
 
-                player.Bankroll.ApplyNetChange(net);
+                key.Player.Bankroll.ApplyNetChange(net);
             }
         }
 

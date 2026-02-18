@@ -1,37 +1,38 @@
 ﻿using System;
+using System.Collections.Generic;
 using Blackjack.Core.Abstractions;
 using Blackjack.Core.Betting;
-using Blackjack.Core.Domain;
 
 namespace Blackjack.Core.Players
 {
-    // Represents one participant in the game.
-    // Holds the player's money and current hand for the round.
+    // Represents a participant (human or bot).
+    // Holds bankroll and one or more hands for the current round.
     public sealed class Player
     {
         public string Name { get; }
         public Bankroll Bankroll { get; }
-        public Bet? CurrentBet { get; private set; }
-        public Hand Hand { get; }
-        public PlayerHandState HandState { get; }
+
+        // The decision maker (bot/human) is injected to keep Player UI-agnostic.
         public IPlayerStrategy Strategy { get; }
+
+        // Each player can have 1+ hands (after split).
+        public List<PlayerHand> Hands { get; }
 
         public Player(string name, Bankroll bankroll, IPlayerStrategy strategy)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                throw new ArgumentException("A name is required", nameof(name));
+                throw new ArgumentException("Name is required.", nameof(name));
             }
 
             Name = name;
             Bankroll = bankroll ?? throw new ArgumentNullException(nameof(bankroll));
             Strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
 
-            Hand = new Hand();
-            HandState = new PlayerHandState();
+            Hands = new List<PlayerHand>();
         }
 
-        public void SetBet(Bet bet)
+        public void StartNewRoundWithBet(Bet bet)
         {
             if (bet == null)
             {
@@ -43,15 +44,9 @@ namespace Blackjack.Core.Players
                 throw new InvalidOperationException("Bet is not allowed for this bankroll.");
             }
 
-            CurrentBet = bet;
-        }
-
-        public void ResetForNewRound()
-        {
-            // Resets state so the same Player instance can be reused across rounds.
-            CurrentBet = null;
-            Hand.Clear();
-            HandState.Reset();
+            // Ensure exactly one active hand at round start.
+            Hands.Clear();
+            Hands.Add(new PlayerHand(bet));
         }
     }
 }

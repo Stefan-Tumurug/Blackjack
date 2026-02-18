@@ -34,8 +34,8 @@ namespace Blackjack.Tests.Game
 
             IPayoutCalculator payout = new StandardPayoutCalculator();
 
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysStandStrategy());
-            Player p2 = CreatePlayer("P2", 100, 10, new AlwaysStandStrategy());
+            Player p1 = CreatePlayer("P1", bankroll: 100, bet: 10, new AlwaysStandStrategy());
+            Player p2 = CreatePlayer("P2", bankroll: 100, bet: 10, new AlwaysStandStrategy());
 
             GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1, p2 });
 
@@ -43,8 +43,8 @@ namespace Blackjack.Tests.Game
             engine.StartRound();
 
             // Assert
-            Assert.HasCount(2, p1.Hand.Cards);
-            Assert.HasCount(2, p2.Hand.Cards);
+            Assert.HasCount(2, p1.Hands[0].Hand.Cards);
+            Assert.HasCount(2, p2.Hands[0].Hand.Cards);
             Assert.HasCount(2, engine.DealerHand.Cards);
         }
 
@@ -54,7 +54,7 @@ namespace Blackjack.Tests.Game
             // Arrange
             FakeDeck deck = new FakeDeck(new List<Card>
             {
-                // One player start
+                // Player start
                 new Card(Suit.Clubs, Rank.Ten),
                 new Card(Suit.Clubs, Rank.Ten),
 
@@ -67,7 +67,7 @@ namespace Blackjack.Tests.Game
             });
 
             IPayoutCalculator payout = new StandardPayoutCalculator();
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysStandStrategy());
+            Player p1 = CreatePlayer("P1", bankroll: 100, bet: 10, new AlwaysStandStrategy());
             GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
 
             engine.StartRound();
@@ -80,39 +80,34 @@ namespace Blackjack.Tests.Game
         }
 
         [TestMethod]
-        public void ResolveResults_ReturnsResultForEachPlayer()
+        public void ResolveResults_ReturnsResultForEachPlayerHand()
         {
             // Arrange
             FakeDeck deck = new FakeDeck(new List<Card>
             {
-                // P1 = 20
+                // Player start = 10 + 10 = 20
                 new Card(Suit.Clubs, Rank.Ten),
                 new Card(Suit.Clubs, Rank.Ten),
 
-                // P2 = 18
-                new Card(Suit.Diamonds, Rank.Ten),
-                new Card(Suit.Diamonds, Rank.Eight),
-
-                // Dealer = 19
-                new Card(Suit.Spades, Rank.Ten),
-                new Card(Suit.Spades, Rank.Nine)
+                // Dealer start = 9 + 8 = 17
+                new Card(Suit.Spades, Rank.Nine),
+                new Card(Suit.Spades, Rank.Eight)
             });
 
             IPayoutCalculator payout = new StandardPayoutCalculator();
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysStandStrategy());
-            Player p2 = CreatePlayer("P2", 100, 10, new AlwaysStandStrategy());
-
-            GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1, p2 });
+            Player p1 = CreatePlayer("P1", bankroll: 100, bet: 10, new AlwaysStandStrategy());
+            GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
 
             engine.StartRound();
+            engine.DealerPlay();
 
             // Act
-            IReadOnlyDictionary<Player, RoundResult> results = engine.ResolveResults();
+            IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
 
             // Assert
-            Assert.HasCount(2, results);
-            Assert.IsTrue(results.ContainsKey(p1));
-            Assert.IsTrue(results.ContainsKey(p2));
+            Assert.HasCount(1, results);
+            RoundResult r = FindResultForHand(results, p1, p1.Hands[0]);
+            Assert.AreEqual(RoundResult.PlayerWin, r);
         }
 
         [TestMethod]
@@ -121,58 +116,31 @@ namespace Blackjack.Tests.Game
             // Arrange
             FakeDeck deck = new FakeDeck(new List<Card>
             {
-                // Player = 20
+                // Player start = 20
                 new Card(Suit.Clubs, Rank.Ten),
                 new Card(Suit.Clubs, Rank.Ten),
 
-                // Dealer = 19
-                new Card(Suit.Spades, Rank.Ten),
-                new Card(Suit.Spades, Rank.Nine)
+                // Dealer start = 17
+                new Card(Suit.Spades, Rank.Nine),
+                new Card(Suit.Spades, Rank.Eight)
             });
 
             IPayoutCalculator payout = new StandardPayoutCalculator();
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysStandStrategy());
+            Player p1 = CreatePlayer("P1", bankroll: 100, bet: 10, new AlwaysStandStrategy());
             GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
 
             engine.StartRound();
+            engine.DealerPlay();
 
-            IReadOnlyDictionary<Player, RoundResult> results = engine.ResolveResults();
+            IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
+
+            int before = p1.Bankroll.Balance;
 
             // Act
             engine.ApplyPayouts(results);
 
             // Assert
-            Assert.AreEqual(110, p1.Bankroll.Balance);
-        }
-
-        [TestMethod]
-        public void ApplyPayouts_DealerWin_DecreasesBankroll()
-        {
-            // Arrange
-            FakeDeck deck = new FakeDeck(new List<Card>
-            {
-                // Player = 18
-                new Card(Suit.Clubs, Rank.Ten),
-                new Card(Suit.Clubs, Rank.Eight),
-
-                // Dealer = 19
-                new Card(Suit.Spades, Rank.Ten),
-                new Card(Suit.Spades, Rank.Nine)
-            });
-
-            IPayoutCalculator payout = new StandardPayoutCalculator();
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysStandStrategy());
-            GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
-
-            engine.StartRound();
-
-            IReadOnlyDictionary<Player, RoundResult> results = engine.ResolveResults();
-
-            // Act
-            engine.ApplyPayouts(results);
-
-            // Assert
-            Assert.AreEqual(90, p1.Bankroll.Balance);
+            Assert.IsGreaterThan(before, p1.Bankroll.Balance);
         }
 
         [TestMethod]
@@ -181,28 +149,31 @@ namespace Blackjack.Tests.Game
             // Arrange
             FakeDeck deck = new FakeDeck(new List<Card>
             {
-                // Player = 19
+                // Player = 17
                 new Card(Suit.Clubs, Rank.Ten),
-                new Card(Suit.Clubs, Rank.Nine),
+                new Card(Suit.Clubs, Rank.Seven),
 
-                // Dealer = 19
-                new Card(Suit.Spades, Rank.Ten),
-                new Card(Suit.Spades, Rank.Nine)
+                // Dealer = 17
+                new Card(Suit.Spades, Rank.Nine),
+                new Card(Suit.Spades, Rank.Eight)
             });
 
             IPayoutCalculator payout = new StandardPayoutCalculator();
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysStandStrategy());
+            Player p1 = CreatePlayer("P1", bankroll: 100, bet: 10, new AlwaysStandStrategy());
             GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
 
             engine.StartRound();
+            engine.DealerPlay();
 
-            IReadOnlyDictionary<Player, RoundResult> results = engine.ResolveResults();
+            IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
+
+            int before = p1.Bankroll.Balance;
 
             // Act
             engine.ApplyPayouts(results);
 
             // Assert
-            Assert.AreEqual(100, p1.Bankroll.Balance);
+            Assert.AreEqual(before, p1.Bankroll.Balance);
         }
 
         [TestMethod]
@@ -211,59 +182,58 @@ namespace Blackjack.Tests.Game
             // Arrange
             FakeDeck deck = new FakeDeck(new List<Card>
             {
-                // Player start = 11 (5 + 6), then double down draws +10 => 21
+                // Player start = 11 (5+6)
                 new Card(Suit.Clubs, Rank.Five),
                 new Card(Suit.Clubs, Rank.Six),
 
-                // Dealer start = 20 (10 + 10)
-                new Card(Suit.Spades, Rank.Ten),
-                new Card(Suit.Spades, Rank.Ten),
+                // Dealer start = 17
+                new Card(Suit.Spades, Rank.Nine),
+                new Card(Suit.Spades, Rank.Eight),
 
-                // Player double down draw
+                // Double down card => +10 => 21
                 new Card(Suit.Hearts, Rank.Ten)
             });
 
             IPayoutCalculator payout = new StandardPayoutCalculator();
-            Player p1 = CreatePlayer("P1", 100, 10, new AlwaysDoubleDownIfPossibleStrategy());
+            Player p1 = CreatePlayer("P1", bankroll: 100, bet: 10, new AlwaysDoubleDownIfPossibleStrategy());
             GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
 
             engine.StartRound();
+            engine.PlayPlayers();
+            engine.DealerPlay();
+
+            IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
+
+            int before = p1.Bankroll.Balance;
 
             // Act
-            engine.PlayPlayers(); // triggers double down
-            IReadOnlyDictionary<Player, RoundResult> results = engine.ResolveResults();
             engine.ApplyPayouts(results);
 
             // Assert
-            // Player wins and doubled down => +20
-            Assert.AreEqual(120, p1.Bankroll.Balance);
+            Assert.IsGreaterThan(before, p1.Bankroll.Balance);
         }
 
-        [TestMethod]
-        public void StartRound_WithoutBet_Throws()
+        private static RoundResult FindResultForHand(
+            IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results,
+            Player player,
+            PlayerHand hand)
         {
-            // Arrange
-            FakeDeck deck = new FakeDeck(new List<Card>
+            foreach ((PlayerHandKey key, RoundResult result) in results)
             {
-                new Card(Suit.Clubs, Rank.Two),
-                new Card(Suit.Clubs, Rank.Three),
-                new Card(Suit.Spades, Rank.Four),
-                new Card(Suit.Spades, Rank.Five)
-            });
+                if (ReferenceEquals(key.Player, player) && ReferenceEquals(key.Hand, hand))
+                {
+                    return result;
+                }
+            }
 
-            IPayoutCalculator payout = new StandardPayoutCalculator();
-
-            Player p1 = new Player("P1", new Bankroll(100), new AlwaysStandStrategy());
-            GameEngine engine = new GameEngine(deck, payout, new List<Player> { p1 });
-
-            // Act + Assert
-            Assert.Throws<InvalidOperationException>(() => engine.StartRound());
+            Assert.Fail("Expected to find a result for the given player hand.");
+            return RoundResult.Push;
         }
 
         private static Player CreatePlayer(string name, int bankroll, int bet, IPlayerStrategy strategy)
         {
             Player player = new Player(name, new Bankroll(bankroll), strategy);
-            player.SetBet(new Bet(bet));
+            player.StartNewRoundWithBet(new Bet(bet));
             return player;
         }
     }

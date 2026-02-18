@@ -12,37 +12,43 @@ while (true)
 {
     Console.Clear();
 
-    // Dependencies
     IDeck deck = new Deck();
     IPayoutCalculator payoutCalculator = new StandardPayoutCalculator();
 
-    // Create one human-like bot player for now
     Player player = new Player(
         name: "Player 1",
         bankroll: new Bankroll(100),
         strategy: new BasicBotStrategy(BotStrategySettings.Standard()));
 
-    player.SetBet(new Bet(10));
+    player.StartNewRoundWithBet(new Bet(10));
 
     List<Player> players = new List<Player> { player };
-
     GameEngine engine = new GameEngine(deck, payoutCalculator, players);
 
     engine.StartRound();
-
-    // Bot plays automatically
     engine.PlayPlayers();
-
     engine.DealerPlay();
 
-    var results = engine.ResolveResults();
+    IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
     engine.ApplyPayouts(results);
 
-    ConsoleRenderer.ShowHands(player.Hand, engine.DealerHand, hideDealerHoleCard: false);
+    // Show first hand only for now (split will create a second hand)
+    Hand firstHand = player.Hands[0].Hand;
 
-    RoundResult result = results[player];
+    ConsoleRenderer.ShowHands(firstHand, engine.DealerHand, hideDealerHoleCard: false);
 
-    string text = result switch
+    // Find result for player's first hand
+    RoundResult firstHandResult = RoundResult.Push;
+    foreach ((PlayerHandKey key, RoundResult result) in results)
+    {
+        if (ReferenceEquals(key.Player, player) && ReferenceEquals(key.Hand, player.Hands[0]))
+        {
+            firstHandResult = result;
+            break;
+        }
+    }
+
+    string text = firstHandResult switch
     {
         RoundResult.PlayerWin => "Player wins!",
         RoundResult.DealerWin => "Dealer wins.",
@@ -50,10 +56,11 @@ while (true)
     };
 
     ConsoleRenderer.ShowResult(text);
-
     Console.WriteLine($"Balance: {player.Bankroll.Balance}");
 
     int again = ConsoleInput.ReadMenuChoice("Play again? 1 = Yes, 0 = No: ", 1, 0);
     if (again == 0)
+    {
         break;
+    }
 }

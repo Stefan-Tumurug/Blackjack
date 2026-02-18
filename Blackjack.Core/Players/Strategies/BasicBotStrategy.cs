@@ -16,7 +16,7 @@ namespace Blackjack.Core.Players.Strategies
 
         public PlayerDecision Decide(PlayerDecisionContext context)
         {
-            int value = context.PlayerHand.GetValue();
+            int value = context.PlayerHand.Hand.GetValue();
 
             // Optional: simple double down rule.
             // Double down only if allowed, possible, and hand value is "good for doubling".
