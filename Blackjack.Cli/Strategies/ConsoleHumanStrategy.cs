@@ -7,17 +7,34 @@ using System;
 
 namespace Blackjack.Cli.Strategies
 {
-    // Human decision maker for the CLI.
-    // GameEngine stays UI-agnostic by depending only on IPlayerStrategy.
+    // Human decision maker used by the CLI.
+    /*
+     ConsoleHumanStrategy
+     - Implements IPlayerStrategy for an interactive human player.
+     - Presents a clear console UI that shows the dealer's up card and the player's hand,
+       then prompts the human to choose an action.
+     - Keeps the GameEngine UI-agnostic by encapsulating console-specific logic inside this strategy.
+    */
     public sealed class ConsoleHumanStrategy : IPlayerStrategy
     {
         private readonly string _playerName;
 
+        /*
+         Initializes a new ConsoleHumanStrategy.
+         - playerName: label shown on the decision screen to identify the human player.
+        */
         public ConsoleHumanStrategy(string playerName)
         {
             _playerName = playerName;
         }
 
+        /*
+         Decide
+         - Entry point called by the engine to obtain a PlayerDecision for the given context.
+         - Validates the context reference and displays a decision screen followed by a choice prompt.
+         - Maps numeric menu choices to the corresponding PlayerDecision value.
+         - Default fallback returns Stand if the returned choice is unexpected.
+        */
         public PlayerDecision Decide(PlayerDecisionContext context)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
@@ -36,6 +53,14 @@ namespace Blackjack.Cli.Strategies
             };
         }
 
+        /*
+         ShowDecisionScreen
+         - Renders the minimal information a human needs to decide:
+           * Player name
+           * Dealer up card
+           * The player's hand cards and current computed value
+         - Uses Console.Clear to provide a focused screen per decision.
+        */
         private void ShowDecisionScreen(PlayerDecisionContext context)
         {
             Console.Clear();
@@ -56,6 +81,14 @@ namespace Blackjack.Cli.Strategies
             Console.WriteLine();
         }
 
+        /*
+         ReadChoice
+         - Builds the allowed menu options dynamically based on the context:
+           CanDoubleDown and CanSplit control whether the corresponding options are shown.
+         - Delegates input validation to ConsoleInput.ReadMenuChoice which ensures the user picks
+           one of the allowed numeric options.
+         - Returns the numeric choice which is later mapped to a PlayerDecision.
+        */
         private static int ReadChoice(PlayerDecisionContext context)
         {
             // Build allowed choices dynamically.

@@ -2,10 +2,26 @@
 
 namespace Blackjack.Cli.Session
 {
-    // Simple tutorial shown before the game starts.
-    // Explains rules and project-specific features.
+    /*
+     TutorialSession
+     - Displays a simple, interactive tutorial on the console before gameplay begins.
+     - Explains core blackjack rules and project-specific behaviors (dealer rules, actions, betting, bots).
+     - Intentionally synchronous and blocking because it is shown as a carriage-returned help screen
+       that the user dismisses with a key press.
+    */
     public sealed class TutorialSession
     {
+        /*
+         Run
+         - Clears the console and writes a brief, human-friendly tutorial covering:
+           * Goal and card values
+           * Dealer drawing rules
+           * Available player actions (Hit, Stand, Double Down, Split)
+           * Betting behavior and persistence of balance between rounds
+           * Bot behavior and per-round results
+         - Waits for a key press before returning to the caller (typically the main menu).
+         - Designed for readability rather than exhaustive rule coverage; keep content concise.
+        */
         public void Run()
         {
             Console.Clear();

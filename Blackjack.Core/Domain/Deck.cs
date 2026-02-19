@@ -4,8 +4,17 @@ using System.Collections.Generic;
 
 namespace Blackjack.Core.Domain
 {
-    // A deck represents a shuffled pile of cards.
-    // We keep Shuffle and Draw here to separate card logic from UI and game flow.
+    // Deck
+    // - Represents a shuffled pile of playing cards used by the game engine.
+    // - Responsibility:
+    //     * Construct a standard 52-card deck (no jokers).
+    //     * Shuffle cards using a Fisher–Yates algorithm.
+    //     * Provide a single-card Draw operation and expose the remaining Count.
+    // - Notes:
+    //     * A deterministic seed can be supplied to the constructor to make shuffle order
+    //       reproducible for tests.
+    //     * The class is intentionally simple and focused on card ordering; it does not
+    //       implement advanced behaviors like multiple shoe handling or automatic reshuffle.
     public sealed class Deck : IDeck
     {
         private readonly List<Card> _cards;
@@ -19,9 +28,15 @@ namespace Blackjack.Core.Domain
             Shuffle();
         }
 
+        // Number of cards remaining in the deck.
+        // Useful for diagnostics and tests that assert deck exhaustion.
         public int Count => _cards.Count;
 
         // Draws the top card from the deck. Throws if the deck is empty.
+        // Behavior:
+        //  - Removes and returns the card at index 0 (top of the deck).
+        //  - Throws InvalidOperationException when called with an empty deck to make callers
+        //    explicitly handle the exhausted deck case.
         public Card Draw()
         {
             if (_cards.Count == 0)
@@ -32,6 +47,9 @@ namespace Blackjack.Core.Domain
         }
 
         // Fisher–Yates shuffle algorithm for efficient, unbiased shuffling.
+        // Implementation details:
+        //  - Iterates backwards and swaps each element with a random earlier element (including itself).
+        //  - Uses the instance Random so providing a seed yields reproducible shuffles.
         public void Shuffle()
         {
             for (int i = _cards.Count - 1; i > 0; i--)
@@ -44,6 +62,7 @@ namespace Blackjack.Core.Domain
         }
 
         // Creates a standard 52-card deck (no jokers).
+        // Uses Enum.GetValues to iterate all suits and ranks defined in Card.cs.
         private static List<Card> CreateStandard52CardDeck()
         {
             List<Card> cards = new List<Card>(capacity: 52);

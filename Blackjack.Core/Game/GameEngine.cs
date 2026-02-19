@@ -8,6 +8,17 @@ namespace Blackjack.Core.Game
 {
     // Coordinates one blackjack round for multiple players against a dealer.
     // Contains no UI logic and depends only on abstractions.
+    /*
+     GameEngine
+     - Responsible for driving a single round's lifecycle:
+       * Starting the round and dealing initial cards
+       * Playing each player's hands (including hit/stand/double/split)
+       * Executing dealer play according to dealer rules
+       * Resolving winners for each hand and applying payouts
+     - Designed to be UI-agnostic: it uses IGameObserver to report events and IPayoutCalculator
+       to compute settlement amounts.
+     - Consumers must ensure valid inputs (e.g., non-empty player list, deck with enough cards).
+    */
     public sealed class GameEngine
     {
         private readonly IDeck _deck;
@@ -35,6 +46,16 @@ namespace Blackjack.Core.Game
 
             DealerHand = new Hand();
         }
+
+        /*
+         StartRound
+         - Prepares engine state for a new round:
+           * Clears dealer's hand
+           * Notifies observers via OnRoundStarted
+           * Verifies each player has at least one hand allocated (caller responsibility)
+           * Performs the initial deal of two cards to dealer and two cards to each player's first hand
+         - Throws when a player has no hands configured.
+        */
         public void StartRound()
         {
             DealerHand.Clear();
@@ -75,6 +96,13 @@ namespace Blackjack.Core.Game
             }
         }
 
+        /*
+         PlayPlayers
+         - Iterates each player and every PlayerHand they own and executes player actions.
+         - The dealer's visible up card is provided to strategies via PlayerDecisionContext.
+         - Each hand is played independently, allowing split-created hands to be handled by the
+           outer iteration when discovered.
+        */
         public void PlayPlayers()
         {
             Card dealerUpCard = DealerHand.Cards[0];
@@ -89,6 +117,13 @@ namespace Blackjack.Core.Game
             }
         }
 
+        /*
+         DealerPlay
+         - Executes the dealer's turn using the standard "draw until at least 17" rule.
+         - After each drawn card the observer is notified with the current dealer value.
+         - Assumes Hand.GetValue() handles Ace (soft/hard) calculations.
+         - If the deck runs out, Deck.Draw() will throw — callers should ensure a sufficiently sized deck.
+        */
         public void DealerPlay()
         {
             // Dealer draws until at least 17 (standard rule).
@@ -102,6 +137,16 @@ namespace Blackjack.Core.Game
             }
         }
 
+        /*
+         PlaySingleHand
+         - Core loop that runs a single PlayerHand through decisions until stand, bust or completion.
+         - Uses the player's IPlayerStrategy to obtain a PlayerDecision via PlayerDecisionContext.
+         - Supports Hit, Stand, DoubleDown and Split with validation methods:
+           * CanDoubleDown - checks two-card constraint, doubled status and bankroll
+           * CanSplit - checks two-card equal-rank constraint, bankroll and single-split rule
+         - Observers are called for decisions and card draws to allow UI or logging.
+         - Invalid or unsupported decisions fall back to Stand to keep engine robust.
+        */
         private void PlaySingleHand(Player player, PlayerHand playerHand, Card dealerUpCard)
         {
             while (true)
@@ -161,6 +206,15 @@ namespace Blackjack.Core.Game
             }
         }
 
+        /*
+         CanDoubleDown
+         - Determines whether the player may double down on the provided hand.
+         - Rules enforced:
+           * Only allowed when the hand currently contains exactly two cards.
+           * The hand must not have been doubled previously.
+           * The player's bankroll must be sufficient to cover the doubled stake (worst-case loss = 2x bet).
+         - This check is conservative and intentionally prevents negative balances during settlement.
+        */
         private static bool CanDoubleDown(Player player, PlayerHand playerHand)
         {
             if (playerHand.Hand.Cards.Count != 2)
@@ -178,6 +232,15 @@ namespace Blackjack.Core.Game
             return player.Bankroll.Balance >= worstCaseLoss;
         }
 
+        /*
+         CanSplit
+         - Minimal split validation:
+           * Only allowed on exactly two cards.
+           * Ranks of the two cards must match.
+           * Player may have at most one split (no resplitting in this implementation).
+           * Player's bankroll must be sufficient to cover the additional bet (worst-case 2x bet).
+         - Returns true when a split is permitted; false otherwise.
+        */
         private static bool CanSplit(PlayerHand playerHand, Player player)
         {
             // Minimal split rule:
@@ -206,6 +269,18 @@ namespace Blackjack.Core.Game
             return first.Rank == second.Rank;
         }
 
+        /*
+         PerformSplit
+         - Executes a split operation when allowed:
+           * Validates bankroll again and rejects if insufficient funds.
+           * Creates a new PlayerHand with the same bet as the original.
+           * Moves the second card into the new hand and leaves the original with the first card.
+           * Deals one new card to each hand from the deck.
+           * Adds the created hand to the player's Hands collection.
+         - Notes:
+           * This method keeps checks conservative and returns without modifying state when split is not possible.
+           * The method assumes PlayerHand, Player and Deck behave as expected (no concurrent modifications).
+        */
         private void PerformSplit(Player player, PlayerHand originalHand)
         {
             // Splitting duplicates the bet for the new hand.
@@ -243,6 +318,13 @@ namespace Blackjack.Core.Game
 
             player.Hands.Add(splitHand);
         }
+
+        /*
+         ResolveResults
+         - Evaluates each player's hand against the dealer and returns a list of result tuples
+           containing a PlayerHandKey and the resolved RoundResult.
+         - Uses DetermineWinner to decide each individual hand outcome.
+        */
         public IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> ResolveResults()
         {
             List<(PlayerHandKey, RoundResult)> results = new();
@@ -258,6 +340,15 @@ namespace Blackjack.Core.Game
 
             return results;
         }
+
+        /*
+         ApplyPayouts
+         - Applies payouts to each player according to the provided results.
+         - For each resolved hand:
+           * Compute net change using IPayoutCalculator.CalculateNetChange (base bet, result, doubledDown)
+           * Apply the returned net change to the player's Bankroll via ApplyNetChange
+         - This method centralizes settlement so the engine does not directly calculate money rules.
+        */
         public void ApplyPayouts(IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results)
         {
             foreach ((PlayerHandKey key, RoundResult result) in results)
@@ -271,6 +362,15 @@ namespace Blackjack.Core.Game
             }
         }
 
+        /*
+         DetermineWinner
+         - Compares a single player's hand against the dealer to decide the RoundResult.
+         - Rules:
+           * If the player's hand is bust => DealerWin
+           * If the dealer's hand is bust => PlayerWin
+           * Otherwise compare numeric values: higher value wins, equal values => Push
+         - Uses Hand's GetValue() and IsBust which include Ace handling.
+        */
         private static RoundResult DetermineWinner(Hand playerHand, Hand dealerHand)
         {
             if (playerHand.IsBust) return RoundResult.DealerWin;

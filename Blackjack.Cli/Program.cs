@@ -11,6 +11,23 @@ using Blackjack.Core.Players.Strategies;
 using System;
 using System.Collections.Generic;
 
+/*
+ Program.cs
+ - Entrypoint for the CLI blackjack application using C# top-level statements.
+ - Responsible for wiring together domain services (payout calculator), creating persistent
+   player instances (so bankroll persists across rounds), and presenting a simple main menu.
+ - Contains a synchronous, blocking UI flow intended for human-driven play:
+   * Main menu with options to start a game, show tutorial or exit.
+   * When starting a game, runs a simple per-round loop that:
+     - Shows balances
+     - Reads player's bet (validating against bankroll)
+     - Lets bots place bets using a simple rule
+     - Constructs a new shuffled deck and a GameEngine per round
+     - Optionally uses ConsoleGameObserver for step-by-step visualization
+     - Runs the round, resolves results, applies payouts and shows round summary
+ - Designed for readability and simplicity rather than concurrency or advanced UI features.
+*/
+
 IPayoutCalculator payoutCalculator = new StandardPayoutCalculator();
 
 // Create players ONCE so bankroll persists across rounds
@@ -31,7 +48,7 @@ Player botB = new Player(
 
 List<Player> players = new List<Player> { player, botA, botB };
 
-// Tutorial session
+// Tutorial session helper (shows a blocking how-to screen)
 TutorialSession tutorialSession = new TutorialSession();
 
 // Reset bankroll when starting a new session
@@ -39,7 +56,7 @@ player.Bankroll.Reset(100);
 botA.Bankroll.Reset(100);
 botB.Bankroll.Reset(100);
 
-// Main menu
+// Main menu loop
 while (true)
 {
     Console.Clear();
@@ -53,22 +70,26 @@ while (true)
 
     if (menuChoice == 2)
     {
+        // Show tutorial and return to menu
         tutorialSession.Run();
         continue;
     }
 
     if (menuChoice == 0)
     {
+        // Exit application
         return;
     }
+
     if (menuChoice == 1)
     {
-        // New session starts here
+        // New session: reset bankrolls for all players
         player.Bankroll.Reset(100);
         botA.Bankroll.Reset(100);
         botB.Bankroll.Reset(100);
     }
-    // Format round result for display
+
+    // Helper to convert RoundResult enum to a human-friendly label for display.
     static string FormatResult(RoundResult result)
     {
         return result switch
@@ -79,24 +100,24 @@ while (true)
         };
     }
 
-
     // ---- GAME LOOP ----
+    // This inner loop represents a single play session: repeated rounds until the human
+    // player chooses to return to the main menu or has no money left.
     while (true)
     {
         Console.Clear();
 
         if (player.Bankroll.Balance <= 0)
         {
+            // Human player broke — inform and return to main menu (break inner loop only)
             Console.Clear();
             Console.WriteLine("You have no money left. Session ended.");
             Console.WriteLine("Press any key to return to the main menu...");
             Console.ReadKey(true);
-
-            // Break out of the GAME loop only
             break;
         }
 
-
+        // Show current balances for all players
         Console.WriteLine("=== Balances ===");
         foreach (Player p in players)
         {
@@ -104,11 +125,12 @@ while (true)
         }
         Console.WriteLine();
 
-        // Bets
+        // Read player's bet (validated against bankroll)
         Console.WriteLine($"Your balance: {player.Bankroll.Balance}");
         int betAmount = ConsoleInput.ReadIntInRange("Place your bet: ", 1, player.Bankroll.Balance);
         player.StartNewRoundWithBet(new Bet(betAmount));
 
+        // Simple bot betting rule: bet 10% of bankroll (minimum 1)
         if (botA.Bankroll.Balance > 0)
         {
             int botBet = Math.Max(1, botA.Bankroll.Balance / 10);
@@ -121,18 +143,21 @@ while (true)
             botB.StartNewRoundWithBet(new Bet(botBet));
         }
 
+        // Per-round setup: new shuffled deck and game engine
         IDeck deck = new Deck();
-        ConsoleGameObserver observer = new ConsoleGameObserver(1200);
+        ConsoleGameObserver observer = new ConsoleGameObserver(1200); // visual step delays
         GameEngine engine = new GameEngine(deck, payoutCalculator, players, observer);
 
-
+        // Play round lifecycle
         engine.StartRound();
         engine.PlayPlayers();
         engine.DealerPlay();
 
+        // Resolve results and apply payouts to bankrolls
         IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
         engine.ApplyPayouts(results);
 
+        // Show round summary: dealer and each player's hands, values and results
         Console.Clear();
         Console.WriteLine("=== Dealer Hand ===");
         foreach (Card card in engine.DealerHand.Cards)
@@ -174,6 +199,7 @@ while (true)
             Console.WriteLine();
         }
 
+        // Prompt to play another round or return to the main menu
         int again = ConsoleInput.ReadMenuChoice("Next round? 1 = Yes, 0 = Back to menu: ", 1, 0);
         if (again == 0)
         {
