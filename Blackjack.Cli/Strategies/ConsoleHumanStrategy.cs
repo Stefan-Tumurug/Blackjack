@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Blackjack.Cli.UI;
 using Blackjack.Core.Abstractions;
+using Blackjack.Core.Domain;
 using Blackjack.Core.Game;
 using Blackjack.Core.Players;
-using Blackjack.Cli.UI;
+using System;
 
 namespace Blackjack.Cli.Strategies
 {
@@ -46,7 +47,7 @@ namespace Blackjack.Cli.Strategies
             PlayerHand playerHand = context.PlayerHand;
 
             Console.WriteLine("Your hand:");
-            foreach (var card in playerHand.Hand.Cards)
+            foreach (Card card in playerHand.Hand.Cards)
             {
                 Console.WriteLine($" - {card}");
             }

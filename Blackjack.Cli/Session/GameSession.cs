@@ -50,7 +50,7 @@ namespace Blackjack.Cli.Session
                 engine.PlayPlayers();
                 engine.DealerPlay();
 
-                var results = engine.ResolveResults();
+                IReadOnlyList<(PlayerHandKey Key, RoundResult Result)> results = engine.ResolveResults();
                 engine.ApplyPayouts(results);
 
                 ShowRoundSummary(engine, results);
@@ -166,6 +166,10 @@ namespace Blackjack.Cli.Session
             Console.WriteLine();
         }
 
+        // Determines whether any player in the session can continue playing.
+        // Iterates the session's player list and checks each player's Bankroll.Balance.
+        // A player can continue only when their balance is greater than zero.
+        // Returns true if at least one player has a positive balance; otherwise false.
         private bool CanAnyPlayerContinue()
         {
             foreach (Player player in _players)

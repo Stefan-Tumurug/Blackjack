@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Blackjack.Cli.Observers;
+using Blackjack.Cli.Session;
+using Blackjack.Cli.Strategies;
+using Blackjack.Cli.UI;
 using Blackjack.Core.Abstractions;
 using Blackjack.Core.Betting;
 using Blackjack.Core.Domain;
 using Blackjack.Core.Game;
 using Blackjack.Core.Players;
 using Blackjack.Core.Players.Strategies;
-using Blackjack.Cli.Strategies;
-using Blackjack.Cli.UI;
-using Blackjack.Cli.Session;
+using System;
+using System.Collections.Generic;
 
 IPayoutCalculator payoutCalculator = new StandardPayoutCalculator();
 
@@ -67,6 +68,16 @@ while (true)
         botA.Bankroll.Reset(100);
         botB.Bankroll.Reset(100);
     }
+    // Format round result for display
+    static string FormatResult(RoundResult result)
+    {
+        return result switch
+        {
+            RoundResult.PlayerWin => "Win",
+            RoundResult.DealerWin => "Lose",
+            _ => "Push"
+        };
+    }
 
 
     // ---- GAME LOOP ----
@@ -111,7 +122,9 @@ while (true)
         }
 
         IDeck deck = new Deck();
-        GameEngine engine = new GameEngine(deck, payoutCalculator, players);
+        ConsoleGameObserver observer = new ConsoleGameObserver(1200);
+        GameEngine engine = new GameEngine(deck, payoutCalculator, players, observer);
+
 
         engine.StartRound();
         engine.PlayPlayers();
@@ -153,7 +166,8 @@ while (true)
                     Console.WriteLine($" - {card}");
                 }
 
-                Console.WriteLine($"Value: {hand.Hand.GetValue()} | Result: {handResult}");
+                string resultText = FormatResult(handResult);
+                Console.WriteLine($"Value: {hand.Hand.GetValue()} | Result: {resultText}");
                 Console.WriteLine();
             }
 

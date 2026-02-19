@@ -4,7 +4,6 @@ using Blackjack.Core.Abstractions;
 using Blackjack.Core.Betting;
 using Blackjack.Core.Domain;
 using Blackjack.Core.Players;
-
 namespace Blackjack.Core.Game
 {
     // Coordinates one blackjack round for multiple players against a dealer.
@@ -13,6 +12,7 @@ namespace Blackjack.Core.Game
     {
         private readonly IDeck _deck;
         private readonly IPayoutCalculator _payoutCalculator;
+        private readonly IGameObserver _observer;
 
         public IReadOnlyList<Player> Players { get; }
         public Hand DealerHand { get; }
@@ -20,10 +20,12 @@ namespace Blackjack.Core.Game
         public GameEngine(
             IDeck deck,
             IPayoutCalculator payoutCalculator,
-            IReadOnlyList<Player> players)
+            IReadOnlyList<Player> players,
+            IGameObserver? observer = null)
         {
             _deck = deck ?? throw new ArgumentNullException(nameof(deck));
             _payoutCalculator = payoutCalculator ?? throw new ArgumentNullException(nameof(payoutCalculator));
+            _observer = observer ?? new NullGameObserver();
             Players = players ?? throw new ArgumentNullException(nameof(players));
 
             if (Players.Count == 0)
@@ -36,6 +38,7 @@ namespace Blackjack.Core.Game
         public void StartRound()
         {
             DealerHand.Clear();
+            _observer.OnRoundStarted();
 
             foreach (Player player in Players)
             {
@@ -50,17 +53,26 @@ namespace Blackjack.Core.Game
 
         private void DealInitialCards()
         {
+            Card upCard = _deck.Draw();
+            Card holeCard = _deck.Draw();
+
+            DealerHand.AddCard(upCard);
+            DealerHand.AddCard(holeCard);
+
+            _observer.OnDealerDealt(upCard, holeCard);
+
             foreach (Player player in Players)
             {
-                // At round start we only deal to the first hand.
                 PlayerHand firstHand = player.Hands[0];
 
-                firstHand.Hand.AddCard(_deck.Draw());
-                firstHand.Hand.AddCard(_deck.Draw());
-            }
+                Card firstCard = _deck.Draw();
+                firstHand.Hand.AddCard(firstCard);
+                _observer.OnPlayerDealt(player, firstHand, firstCard);
 
-            DealerHand.AddCard(_deck.Draw());
-            DealerHand.AddCard(_deck.Draw());
+                Card secondCard = _deck.Draw();
+                firstHand.Hand.AddCard(secondCard);
+                _observer.OnPlayerDealt(player, firstHand, secondCard);
+            }
         }
 
         public void PlayPlayers()
@@ -82,7 +94,11 @@ namespace Blackjack.Core.Game
             // Dealer draws until at least 17 (standard rule).
             while (DealerHand.GetValue() < 17)
             {
-                DealerHand.AddCard(_deck.Draw());
+                Card drawn = _deck.Draw();
+                DealerHand.AddCard(drawn);
+
+                int dealerValue = DealerHand.GetValue();
+                _observer.OnDealerCardDrawn(drawn, dealerValue);
             }
         }
 
@@ -101,6 +117,8 @@ namespace Blackjack.Core.Game
                         dealerUpCard,
                         canDoubleDown: CanDoubleDown(player, playerHand),
                         canSplit: CanSplit(playerHand, player)));
+                _observer.OnPlayerDecision(player, playerHand, decision.ToString());
+
 
                 if (decision == PlayerDecision.Stand)
                 {
@@ -110,20 +128,27 @@ namespace Blackjack.Core.Game
 
                 if (decision == PlayerDecision.Hit)
                 {
-                    playerHand.Hand.AddCard(_deck.Draw());
+                    Card drawn = _deck.Draw();
+                    playerHand.Hand.AddCard(drawn);
+                    _observer.OnPlayerCardDrawn(player, playerHand, drawn);
                     continue;
                 }
 
+
                 if (decision == PlayerDecision.DoubleDown && CanDoubleDown(player, playerHand))
                 {
-                    // Double down: exactly one card, then stand.
-                    playerHand.Hand.AddCard(_deck.Draw());
+                    Card drawn = _deck.Draw();
+                    playerHand.Hand.AddCard(drawn);
+                    _observer.OnPlayerCardDrawn(player, playerHand, drawn);
+
                     playerHand.State.MarkDoubledDown();
                     return;
                 }
 
+
                 if (decision == PlayerDecision.Split && CanSplit(playerHand, player))
                 {
+                    _observer.OnPlayerDecision(player, playerHand, "Split");
                     PerformSplit(player, playerHand);
                     // After splitting, continue playing the current hand.
                     // The new hand will be played later by the outer loop.
