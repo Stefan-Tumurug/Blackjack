@@ -99,7 +99,7 @@ namespace Blackjack.Core.Game
                     new PlayerDecisionContext(
                         playerHand,
                         dealerUpCard,
-                        canDoubleDown: CanDoubleDown(playerHand),
+                        canDoubleDown: CanDoubleDown(player, playerHand),
                         canSplit: CanSplit(playerHand, player)));
 
                 if (decision == PlayerDecision.Stand)
@@ -114,7 +114,7 @@ namespace Blackjack.Core.Game
                     continue;
                 }
 
-                if (decision == PlayerDecision.DoubleDown && CanDoubleDown(playerHand))
+                if (decision == PlayerDecision.DoubleDown && CanDoubleDown(player, playerHand))
                 {
                     // Double down: exactly one card, then stand.
                     playerHand.Hand.AddCard(_deck.Draw());
@@ -136,9 +136,21 @@ namespace Blackjack.Core.Game
             }
         }
 
-        private static bool CanDoubleDown(PlayerHand playerHand)
+        private static bool CanDoubleDown(Player player, PlayerHand playerHand)
         {
-            return playerHand.Hand.Cards.Count == 2 && !playerHand.State.HasDoubledDown;
+            if (playerHand.Hand.Cards.Count != 2)
+            {
+                return false;
+            }
+
+            if (playerHand.State.HasDoubledDown)
+            {
+                return false;
+            }
+
+            // With net settlement, the worst-case loss on double down is 2x bet.
+            int worstCaseLoss = playerHand.Bet.Amount * 2;
+            return player.Bankroll.Balance >= worstCaseLoss;
         }
 
         private static bool CanSplit(PlayerHand playerHand, Player player)
@@ -157,6 +169,12 @@ namespace Blackjack.Core.Game
                 return false;
             }
 
+            int worstCaseLoss = playerHand.Bet.Amount * 2;
+            if (player.Bankroll.Balance < worstCaseLoss)
+            {
+                return false;
+            }
+
             Card first = playerHand.Hand.Cards[0];
             Card second = playerHand.Hand.Cards[1];
 
@@ -170,6 +188,12 @@ namespace Blackjack.Core.Game
             if (!player.Bankroll.CanPlaceBet(originalHand.Bet.Amount))
             {
                 // Not enough money to split. Strategy asked for it, but we reject it.
+                return;
+            }
+
+            int worstCaseLoss = originalHand.Bet.Amount * 2;
+            if (player.Bankroll.Balance < worstCaseLoss)
+            {
                 return;
             }
 

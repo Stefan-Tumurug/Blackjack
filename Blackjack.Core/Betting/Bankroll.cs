@@ -32,5 +32,16 @@ namespace Blackjack.Core.Betting
             }
             Balance = newBalance;
         }
+
+        public void Reset(int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            }
+
+            Balance = amount;
+        }
+
     }
 }

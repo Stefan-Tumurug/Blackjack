@@ -33,6 +33,21 @@ namespace Blackjack.Cli.UI
                 Console.WriteLine($"Invalid choice. Please enter one of the following: {string.Join(", ", allowed)}");
             }
         }
+        public static int ReadIntInRange(string prompt, int min, int max)
+        {
+            while (true)
+            {
+                System.Console.Write(prompt);
+                string? input = System.Console.ReadLine();
+
+                if (int.TryParse(input, out int value) && value >= min && value <= max)
+                {
+                    return value;
+                }
+
+                System.Console.WriteLine($"Please enter a number between {min} and {max}.");
+            }
+        }
 
         private static bool IsAllowed(int value, int[] allowed)
         {
