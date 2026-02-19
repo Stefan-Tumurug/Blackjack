@@ -22,7 +22,7 @@ namespace Blackjack.Core.Players
     public sealed class Player
     {
         // Human-friendly name for display and logging.
-        public string Name { get; }
+        public string Name { get; private set; }
 
         // Encapsulates the player's available money and related operations.
         public Bankroll Bankroll { get; }
@@ -85,5 +85,10 @@ namespace Blackjack.Core.Players
             Hands.Clear();
             Hands.Add(new PlayerHand(bet));
         }
+        public void Rename(string newName)
+        {
+            Name = newName;
+        }
+
     }
 }

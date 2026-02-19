@@ -31,10 +31,12 @@ using System.Collections.Generic;
 IPayoutCalculator payoutCalculator = new StandardPayoutCalculator();
 
 // Create players ONCE so bankroll persists across rounds
+string playerName = ConsoleInput.ReadRequiredString("Enter your name: ");
+
 Player player = new Player(
-    name: "You",
+    name: playerName,
     bankroll: new Bankroll(100),
-    strategy: new ConsoleHumanStrategy("You"));
+    strategy: new ConsoleHumanStrategy(playerName));
 
 Player botA = new Player(
     name: "Bot A",
@@ -47,6 +49,7 @@ Player botB = new Player(
     strategy: new BasicBotStrategy(BotStrategySettings.Conservative()));
 
 List<Player> players = new List<Player> { player, botA, botB };
+
 
 // Tutorial session helper (shows a blocking how-to screen)
 TutorialSession tutorialSession = new TutorialSession();
@@ -83,11 +86,11 @@ while (true)
 
     if (menuChoice == 1)
     {
-        // New session: reset bankrolls for all players
         player.Bankroll.Reset(100);
         botA.Bankroll.Reset(100);
         botB.Bankroll.Reset(100);
     }
+
 
     // Helper to convert RoundResult enum to a human-friendly label for display.
     static string FormatResult(RoundResult result)
