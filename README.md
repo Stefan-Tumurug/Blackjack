@@ -1,158 +1,193 @@
-Blackjack (C# CLI)
+# Blackjack CLI – Clean Architecture C# Project
 
-  Simple Blackjack implementation in C# with clean architecture, unit tests, and code coverage.
+A console-based Blackjack implementation written in C# using a clean architecture structure with separation between domain logic, UI, and tests.
 
+The project demonstrates object-oriented design, dependency injection, deterministic testing, and maintainable game engine logic.
 
+---
 
-Project Overview
+# Project Structure
 
-  This project implements a standard Blackjack round between one player and a dealer using a console interface (CLI).
-  The focus of the project is clean separation of concerns, testable game logic, and documentation of development decisions.
+The solution contains three projects:
 
+## Blackjack.Core
 
+Contains all domain logic:
 
-The solution is divided into three projects:
-  
-  Blackjack.Core
-  Contains all domain models and game logic (Card, Deck, Hand, GameEngine).
-  
-  Blackjack.Cli
-  Console application responsible for user input and rendering output.
-  
-  Blackjack.Tests
-  MSTest project containing unit tests for core Blackjack rules and game flow.
+- Card
+- Deck
+- Hand (Ace handling logic)
+- GameEngine
+- RoundResult enum
+- IDeck abstraction (for testability)
 
+Responsibilities:
 
+- rules of Blackjack
+- score calculation
+- dealer behaviour
+- round resolution
+- deterministic gameplay logic
 
+No UI code exists in this layer.
 
+---
 
-Implemented Features
+## Blackjack.Cli
 
+Console interface for interacting with the game.
 
-  Standard 52-card deck with shuffle and draw
-  
-  Correct hand value calculation with Ace as 1 or 11
-  
-  Player hit / stand
-  
-  Dealer automatically draws until at least 17
-  
-  Win / lose / push outcome logic
-  
-  Play again / exit flow
-  
-  Robust input validation
-  
-  Separation of UI and game logic
-  
-  Unit tests for:
-  
-  Hand value (Ace logic)
-  
-  Bust detection
-  
-  Dealer draw rule
-  
-  Game outcome logic
-  
-  HTML code coverage report
+Includes:
 
+- Program.cs (game loop)
+- ConsoleInput (validated user input helpers)
+- ConsoleRenderer (console output handling)
 
+Responsibilities:
 
+- display game state
+- read player decisions
+- control round flow
+- replay handling
 
+Game logic remains fully separated inside Blackjack.Core.
 
-Architecture
+---
 
+## Blackjack.Tests
 
-The solution follows basic Clean Architecture principles:
+Unit tests written using MSTest.
 
-  Core logic is isolated from UI
-  
-  GameEngine depends on abstractions (IDeck)
-  
-  CLI acts as composition root
-  
-  Tests use FakeDeck for deterministic scenarios
+Includes:
 
+- HandValueTests
+- GameEngineTests
+- FakeDeck implementation for deterministic scenarios
 
+Tests verify:
 
+- Ace scoring logic
+- dealer draw rules (dealer stands on 17+)
+- player bust scenarios
+- push situations
+- round outcome correctness
 
-Folder structure:
+---
 
+# Features
 
-Blackjack.Core
-  
-  Domain
-  Card, Deck, Hand
-  
-  Game
-  GameEngine, RoundResult
-  
-  Abstractions
-  IDeck
+Implemented Blackjack mechanics:
 
-Blackjack.Cli
-  
-  UI
-  ConsoleInput, ConsoleRenderer
-  
-  Program.cs
+- player hit / stand
+- dealer automatic draw to 17
+- Ace value adjustment (1 or 11)
+- bust detection
+- push detection
+- replay support
+- deterministic testing via FakeDeck
 
-  
-Blackjack.Tests
-  
-  Domain
-  HandValueTests
-  
-  Game
-  GameEngineTests, FakeDeck
+---
 
-  
+# Example Gameplay Flow
 
-Running the Application
+1. deck is created
+2. player receives two cards
+3. dealer receives two cards
+4. player chooses hit or stand
+5. dealer draws until reaching 17+
+6. winner is determined
+7. result is displayed
+8. player can start a new round
 
-  Open the solution in Visual Studio.
-  
-  Set Blackjack.Cli as startup project.
+---
 
+# Architecture Highlights
 
-Run:
+This project demonstrates:
 
-  F5
+- separation of concerns
+- dependency inversion using IDeck
+- deterministic testing with fake dependencies
+- domain-driven game engine structure
+- reusable console UI helpers
+- clean class responsibilities
 
+GameEngine contains no console logic and is fully testable in isolation.
 
-Running Tests
+---
 
-  In Visual Studio:
-  
-  Test → Run All Tests
+# Testing
 
-  
+Tests are written using MSTest.
 
-Code Coverage
+Example scenarios:
 
-  Coverage is generated using:
-  
-  MSTest
-  
-  Coverlet
-  
-  ReportGenerator
-  
-  An HTML coverage report can be generated via the provided script and opened in a browser.
+- dealer stops drawing at 17
+- player bust results in loss
+- equal score results in push
+- Ace adjusts dynamically between 1 and 11
+
+Coverage is generated using:
+
+- Coverlet
+- ReportGenerator
+
+---
+
+# Example Build
+
+Run from solution folder:
 
 
-
-Development Notes
-
-  Unit tests were implemented early to validate core Blackjack rules before building the CLI.
-  
-  The game engine is fully testable using dependency injection through IDeck, allowing deterministic tests via FakeDeck.
-  
-  This approach minimizes regressions during further development and keeps UI concerns separated from business logic.
+dotnet build
 
 
+Run the CLI version:
 
-Author
+
+dotnet run --project Blackjack.Cli
+
+
+Run tests:
+
+
+dotnet test
+
+
+---
+
+# Example Test Strategy
+
+The FakeDeck class allows deterministic control of card order:
+
+Example:
+
+
+FakeDeck deck = new FakeDeck(
+new Card(Rank.Ten, Suit.Spades),
+new Card(Rank.Six, Suit.Hearts)
+);
+
+
+This makes GameEngine behaviour predictable and testable.
+
+---
+
+# Learning Goals
+
+This project focuses on:
+
+- object-oriented design in C#
+- dependency injection principles
+- deterministic unit testing
+- domain logic isolation
+- console UI separation
+- maintainable architecture
+
+---
+
+# Author
 
 Stefan Andrei Tumurug
+
+C# console project demonstrating clean architecture, testable domain logic, and structured Blackjack game rules.
